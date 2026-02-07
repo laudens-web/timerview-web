@@ -87,11 +87,15 @@
         const params = new URLSearchParams(window.location.search);
         const code = params.get('code');
         const realmId = params.get('realmId');
+        const state = params.get('state');
         const error = params.get('error');
         const errorDescription = params.get('error_description');
         
         const statusDiv = document.getElementById('status');
         const instructionsDiv = document.getElementById('instructions');
+
+        // Debug: Log what we received
+        console.log('Callback received:', { code, realmId, state, error });
 
         if (error) {
             // Handle OAuth error
@@ -100,15 +104,22 @@
                 <p>${errorDescription || error}</p>
                 <p style="margin-top: 1rem;">Please close this window and try again.</p>
             `;
-        } else if (code && realmId) {
+        } else if (code && realmId && state) {
             // Success - try to open the app
             statusDiv.innerHTML = `
                 <h2 class="success">✅ Authorization Successful!</h2>
                 <p>Opening TimerView...</p>
+                <p style="font-size: 0.8rem; margin-top: 1rem; color: #666;">
+                    Code: ${code.substring(0, 20)}...<br>
+                    Realm: ${realmId}<br>
+                    State: ${state}
+                </p>
             `;
 
-            // Try to open the native app with custom URL scheme
-            const appUrl = `timerview://oauth-callback?code=${encodeURIComponent(code)}&realmId=${encodeURIComponent(realmId)}`;
+            // Try to open the native app with custom URL scheme - include state!
+            const appUrl = `timerview://oauth-callback?code=${encodeURIComponent(code)}&realmId=${encodeURIComponent(realmId)}&state=${encodeURIComponent(state)}`;
+            
+            console.log('Opening app with URL:', appUrl);
             
             // Attempt to open app
             window.location.href = appUrl;
@@ -123,10 +134,15 @@
                 instructionsDiv.style.display = 'block';
             }, 3000);
         } else {
-            // No parameters - shouldn't happen
+            // Missing required parameters
             statusDiv.innerHTML = `
                 <h2 class="error">❌ Invalid Response</h2>
-                <p>No authorization code received from QuickBooks.</p>
+                <p>Missing required OAuth parameters.</p>
+                <p style="font-size: 0.8rem; margin-top: 1rem;">
+                    Received: code=${code ? 'yes' : 'NO'}, 
+                    realmId=${realmId ? 'yes' : 'NO'}, 
+                    state=${state ? 'yes' : 'NO'}
+                </p>
                 <p style="margin-top: 1rem;">Please close this window and try again.</p>
             `;
         }
